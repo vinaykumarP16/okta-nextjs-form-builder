@@ -2,9 +2,10 @@ import { create } from "zustand";
 import { arrayMove } from "@dnd-kit/sortable";
 
 interface Field {
+  validation: Field | undefined;
   placeholder: string;
   id: string;
-  type: "text" | "textarea" | "select" | "radio" | "checkbox" | "OTP";
+  type: "text" | "textarea" | "select" | "radio" | "checkbox" | "OTP" | "number" | "email";
   label: string;
   required: boolean;
   options?: { label: string; value: string }[];
@@ -35,12 +36,13 @@ export const useFormStore = create<FormState>((set) => ({
         placeholder: `${type.charAt(0).toUpperCase() + type.slice(1)} Placeholder`,
         ...(type === "select" || type === "radio"
           ? {
-              options: [
-                { label: "Option 1", value: "option1" },
-                { label: "Option 2", value: "option2" },
-              ],
-            }
+            options: [
+              { label: "Option 1", value: "option1" },
+              { label: "Option 2", value: "option2" },
+            ],
+          }
           : {}),
+        validation: undefined
       };
       return { fields: [...state.fields, newField] };
     }),

@@ -1,6 +1,7 @@
 "use client";
 
 import { useFormStore } from "@/lib/store";
+import { cn } from "@/lib/utils";
 import type { DragEndEvent } from "@dnd-kit/core";
 import {
   DndContext,
@@ -32,7 +33,7 @@ import {
   SelectValue
 } from "./ui/select";
 import { Textarea } from "./ui/textarea";
-import { cn } from "@/lib/utils";
+import React from "react";
 
 type Field = {
   length?: number;
@@ -105,7 +106,24 @@ function SortableField({
   };
 
   const [collapsed, setCollapsed] = useState(field.collapsed ?? false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
+  // Detect dark mode for each field (ensures correct theme on drag/preview)
+  const [isDark, setIsDark] = useState(false);
+  useEffect(() => {
+    const updateDark = () => {
+      setIsDark(
+        document.documentElement.classList.contains("dark") ||
+        document.body.classList.contains("dark")
+      );
+    };
+    updateDark();
+    const observer = new MutationObserver(updateDark);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    observer.observe(document.body, { attributes: true, attributeFilter: ["class"] });
+    return () => observer.disconnect();
+  }, []);
+  
   // Section rendering
   if (field.type === "section") {
     return (
@@ -169,115 +187,136 @@ function SortableField({
     );
   }
 
+
+
   return (
-    <motion.div
-      ref={setNodeRef}
-      style={style}
-      // Attach drag listeners to a drag handle for better UX
-      className={`bg-white rounded-xl border border-gray-200 shadow-sm px-4 py-4 mb-4 transition-all duration-200 relative group
-        ${
+    <AnimatePresence>
+      <motion.div
+        ref={setNodeRef}
+        style={style}
+        className={cn(
+          "rounded-2xl border shadow-lg px-4 py-3 mb-3 transition-all duration-200 relative group",
+          isDark
+            ? "bg-neutral-800 border-neutral-700"
+            : "bg-white border-gray-200",
           selectedFieldId === field.id
-            ? "border-blue-400 ring-2 ring-blue-100"
-            : "hover:border-blue-200"
-        }
-        ${isDragging ? "opacity-60" : ""}
-        `}
-      tabIndex={0}
-      aria-label={field.label}
-      role="listitem"
-      onClick={() => !preview && selectField(field.id)}
-      onKeyDown={(e) => {
-        if (!preview && (e.key === "Enter" || e.key === " ")) {
-          selectField(field.id);
-        }
-        if (!preview && e.key === "Delete") {
-          removeField(field.id);
-        }
-      }}
-    >
-      {/* Drag handle for rearrange */}
-      {!preview && (
-        <div
-          {...attributes}
-          {...listeners}
-          className="absolute left-2 top-2 cursor-grab text-gray-400 hover:text-blue-500 transition"
-          title="Drag to reorder"
-          tabIndex={-1}
-          style={{ zIndex: 2 }}
-        >
-          <svg width="18" height="18" fill="none" viewBox="0 0 20 20">
-            <circle cx="5" cy="5" r="1.5" fill="currentColor" />
-            <circle cx="5" cy="10" r="1.5" fill="currentColor" />
-            <circle cx="5" cy="15" r="1.5" fill="currentColor" />
-            <circle cx="10" cy="5" r="1.5" fill="currentColor" />
-            <circle cx="10" cy="10" r="1.5" fill="currentColor" />
-            <circle cx="10" cy="15" r="1.5" fill="currentColor" />
-          </svg>
-        </div>
-      )}
-      {/* Field Title */}
-      {field.type !== "button" && (
-        <div className="flex flex-col mb-2">
-          <label
-            className="text-base font-semibold text-gray-900 mb-0"
-            htmlFor={`field-${field.id}`}
-          >
-            {field.type !== "Button" ? <>{field.label}</> : null}
-          </label>
-        </div>
-      )}
-      {/* Field Content */}
-      <div className="flex flex-col gap-2">
-        {/* Text Input */}
-        {(!field.type || field.type === "text") && (
-          <>
-            <Input
-              id={`field-${field.id}`}
-              placeholder={field.placeholder || ""}
-              aria-label={field.label}
-              className={cn(
-                "focus:ring-2 focus:ring-blue-400 transition border border-gray-300",
-                errors?.[field.id] ? "border-red-500" : ""
-              )}
-              disabled={!preview ? false : undefined}
-              {...(preview
-                ? register?.(field.id, getFieldValidation(field))
-                : {})}
-            />
-            {preview && errors?.[field.id] && (
-              <span className="text-xs text-red-500">
-                {errors[field.id]?.message}
-              </span>
-            )}
-          </>
+            ? isDark
+              ? "border-red-500 ring-2 ring-red-900"
+              : "border-red-500 ring-2 ring-red-100"
+            : isDark
+              ? "hover:border-neutral-500"
+              : "hover:border-red-300",
+          isDragging ? "opacity-60" : ""
         )}
-        {/* Text Area */}
-        {field.type === "textarea" && (
-          <>
-            <Textarea
-              id={`field-${field.id}`}
-              placeholder={field.placeholder || ""}
-              aria-label={field.label}
+        tabIndex={0}
+        aria-label={field.label}
+        role="listitem"
+        onClick={() => !preview && selectField(field.id)}
+        onKeyDown={(e) => {
+          if (!preview && (e.key === "Enter" || e.key === " ")) {
+            selectField(field.id);
+          }
+          if (!preview && e.key === "Delete") {
+            removeField(field.id);
+          }
+        }}
+        initial={{ opacity: 0, y: 24, scale: 0.96 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 24, scale: 0.96 }}
+        transition={{ type: "spring", stiffness: 300, damping: 30, duration: 0.25 }}
+        layout
+      >
+        {/* Drag handle and Field Title */}
+        <div className="flex items-center gap-3 mb-2">
+          {!preview && (
+            <div
+              {...attributes}
+              {...listeners}
+              className="cursor-grab text-gray-400 hover:text-blue-500 transition flex-shrink-0"
+              title="Drag to reorder"
+              tabIndex={-1}
+              style={{ zIndex: 2 }}
+            >
+              <svg width="18" height="18" fill="none" viewBox="0 0 20 20">
+                <circle cx="5" cy="5" r="1.5" fill="currentColor" />
+                <circle cx="5" cy="10" r="1.5" fill="currentColor" />
+                <circle cx="5" cy="15" r="1.5" fill="currentColor" />
+                <circle cx="10" cy="5" r="1.5" fill="currentColor" />
+                <circle cx="10" cy="10" r="1.5" fill="currentColor" />
+                <circle cx="10" cy="15" r="1.5" fill="currentColor" />
+            </svg>
+            </div>
+          )}
+          {field.type !== "button" && (
+            <label
               className={cn(
-                "focus:ring-2 focus:ring-blue-400 transition border border-gray-300",
-                errors?.[field.id] ? "border-red-500" : ""
+                "text-l font-bold mb-0",
+                isDark ? "text-white" : "text-gray-900"
               )}
-              rows={3}
-              disabled={!preview ? false : undefined}
-              {...(preview
-                ? register?.(field.id, getFieldValidation(field))
-                : {})}
-            />
-            {preview && errors?.[field.id] && (
-              <span className="text-xs text-red-500">
-                {errors[field.id]?.message}
-              </span>
-            )}
-          </>
-        )}
-        {/* Select Dropdown */}
-        {field.type === "select" && (
-          <>
+              htmlFor={`field-${field.id}`}
+              style={{ lineHeight: 1.2 }}
+            >
+              {field.type !== "Button" ? <>{field.label}</> : null}
+            </label>
+          )}
+        </div>
+        {/* Field Content */}
+        <div className="flex flex-col gap-2">
+          {/* Text Input */}
+          {(!field.type || field.type === "text") && (
+            <>
+              <Input
+                id={`field-${field.id}`}
+                placeholder={field.placeholder || ""}
+                aria-label={field.label}
+                className={cn(
+                  "border rounded-lg px-4 py-2 focus:ring-2 focus:ring-red-400 focus:border-red-400 transition",
+                  isDark
+                    ? "border-neutral-700 bg-neutral-900 text-white"
+                    : "border-gray-300 bg-gray-50 text-gray-900",
+                  errors?.[field.id] ? "border-red-500" : ""
+                )}
+                disabled={!preview ? false : undefined}
+                {...(preview
+                  ? register?.(field.id, getFieldValidation(field))
+                  : {})}
+              />
+              {preview && errors?.[field.id] && (
+                <span className="text-xs text-red-500">
+                  {errors[field.id]?.message}
+                </span>
+              )}
+            </>
+          )}
+          {/* Text Area */}
+          {field.type === "textarea" && (
+            <>
+              <Textarea
+                id={`field-${field.id}`}
+                placeholder={field.placeholder || ""}
+                aria-label={field.label}
+                className={cn(
+                  "border rounded-lg px-4 py-2 focus:ring-2 focus:ring-red-400 focus:border-red-400 transition",
+                  isDark
+                    ? "border-neutral-700 bg-neutral-900 text-white"
+                    : "border-gray-300 bg-gray-50 text-gray-900",
+                  errors?.[field.id] ? "border-red-500" : ""
+                )}
+                rows={3}
+                disabled={!preview ? false : undefined}
+                {...(preview
+                  ? register?.(field.id, getFieldValidation(field))
+                  : {})}
+              />
+              {preview && errors?.[field.id] && (
+                <span className="text-xs text-red-500">
+                  {errors[field.id]?.message}
+                </span>
+              )}
+            </>
+          )}
+          {/* Select Dropdown */}
+          {field.type === "select" && (
             <div className="flex flex-col gap-2 w-full">
               <Controller
                 name={field.id}
@@ -288,7 +327,12 @@ function SortableField({
                     value={controllerField.value}
                     onValueChange={controllerField.onChange}
                   >
-                    <SelectTrigger className="w-full border border-gray-300">
+                    <SelectTrigger className={cn(
+                      "w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-red-400 focus:border-red-400 transition",
+                      isDark
+                        ? "border-neutral-700 bg-neutral-900 text-white"
+                        : "border-gray-300 bg-gray-50 text-gray-900"
+                    )}>
                       <SelectValue placeholder="Select an option" />
                     </SelectTrigger>
                     <SelectContent>
@@ -307,100 +351,42 @@ function SortableField({
                 </span>
               )}
             </div>
-          </>
-        )}
-        {/* Checkbox */}
-        {field.type === "checkbox" && (
-          <>
-            <div
-              className="flex flex-col flex-1 gap-1"
-              role="group"
-              aria-label={field.label}
-            >
-              {(field.options && field.options.length > 0
-                ? field.options
-                : [{ label: "Option 1", value: "option1" }]
-              ).map((opt, idx) => (
-                <label
-                  key={idx}
-                  className="inline-flex items-center mb-1 text-gray-700 gap-2"
-                >
-                  <Checkbox
-                    id={`${field.id}-${opt.value}`}
-                    value={opt.value}
-                    className="border border-gray-300"
-                    disabled={!preview ? false : undefined}
-                    {...(preview
-                      ? register?.(field.id, getFieldValidation(field))
-                      : {})}
-                  />
-                  {opt.label}
-                </label>
-              ))}
-            </div>
-            {preview && errors?.[field.id] && (
-              <span className="text-xs text-red-500">
-                {errors[field.id]?.message}
-              </span>
-            )}
-          </>
-        )}
-        {/* Radio Group */}
-        {field.type === "radio" &&
-          field.options &&
-          field.options.length > 0 && (
+          )}
+          {/* Checkbox */}
+          {field.type === "checkbox" && (
             <>
-              {preview && control ? (
-                <Controller
-                  name={field.id}
-                  control={control}
-                  rules={getFieldValidation(field)}
-                  render={({ field: controllerField }) => (
-                    <RadioGroup
-                      value={controllerField.value}
-                      onValueChange={controllerField.onChange}
-                      className="flex flex-col flex-1 gap-1"
-                      aria-label={field.label}
-                    >
-                      {field.options?.map((opt, idx) => (
-                        <label
-                          key={idx}
-                          htmlFor={`${field.id}-${opt.value}`}
-                          className="inline-flex items-center mb-1 text-gray-700 gap-2"
-                        >
-                          <RadioGroupItem
-                            value={opt.value}
-                            id={`${field.id}-${opt.value}`}
-                            className="mb-1 border border-gray-300"
-                          />
-                          {opt.label}
-                        </label>
-                      ))}
-                    </RadioGroup>
-                  )}
-                />
-              ) : (
-                <RadioGroup
-                  name={field.id}
-                  className="flex flex-col flex-1 gap-1"
-                  aria-label={field.label}
-                >
-                  {field.options.map((opt, idx) => (
-                    <label
-                      key={idx}
-                      htmlFor={`${field.id}-${opt.value}`}
-                      className="inline-flex items-center mb-1 text-gray-700 gap-2"
-                    >
-                      <RadioGroupItem
-                        value={opt.value}
-                        id={`${field.id}-${opt.value}`}
-                        className="mb-1 border border-gray-300"
-                      />
-                      {opt.label}
-                    </label>
-                  ))}
-                </RadioGroup>
-              )}
+              <div
+                className="flex flex-col flex-1 gap-1"
+                role="group"
+                aria-label={field.label}
+              >
+                {(field.options && field.options.length > 0
+                  ? field.options
+                  : [{ label: "Option 1", value: "option1" }]
+                ).map((opt, idx) => (
+                  <label
+                    key={idx}
+                    className={cn(
+                      "inline-flex items-center mb-1 gap-2",
+                      isDark ? "text-gray-200" : "text-gray-700"
+                    )}
+                  >
+                    <Checkbox
+                      id={`${field.id}-${opt.value}`}
+                      value={opt.value}
+                      className={cn(
+                        "border",
+                        isDark ? "border-neutral-700" : "border-gray-300"
+                      )}
+                      disabled={!preview ? false : undefined}
+                      {...(preview
+                        ? register?.(field.id, getFieldValidation(field))
+                        : {})}
+                    />
+                    {opt.label}
+                  </label>
+                ))}
+              </div>
               {preview && errors?.[field.id] && (
                 <span className="text-xs text-red-500">
                   {errors[field.id]?.message}
@@ -408,129 +394,260 @@ function SortableField({
               )}
             </>
           )}
-        {/* Number Input */}
-        {field.type === "number" && (
-          <>
-            <Input
-              id={`field-${field.id}`}
-              type="number"
-              placeholder={field.placeholder || ""}
-              aria-label={field.label}
-              className={cn(
-                "focus:ring-2 focus:ring-blue-400 transition border border-gray-300",
-                errors?.[field.id] ? "border-red-500" : ""
-              )}
-              disabled={!preview ? false : undefined}
-              {...(preview
-                ? register?.(field.id, getFieldValidation(field))
-                : {})}
-            />
-            {preview && errors?.[field.id] && (
-              <span className="text-xs text-red-500">
-                {errors[field.id]?.message}
-              </span>
-            )}
-          </>
-        )}
-        {/* Email Input */}
-        {field.type === "email" && (
-          <>
-            <Input
-              id={`field-${field.id}`}
-              type="email"
-              placeholder={field.placeholder || ""}
-              aria-label={field.label}
-              className={cn(
-                "focus:ring-2 focus:ring-blue-400 transition border border-gray-300",
-                errors?.[field.id] ? "border-red-500" : ""
-              )}
-              disabled={!preview ? false : undefined}
-              {...(preview
-                ? register?.(field.id, getFieldValidation(field))
-                : {})}
-            />
-            {preview && errors?.[field.id] && (
-              <span className="text-xs text-red-500">
-                {errors[field.id]?.message}
-              </span>
-            )}
-          </>
-        )}
-        {field.type === "OTP" && (
-          <div className="flex flex-col flex-1 gap-1">
-            {preview && control ? (
-              <Controller
-                name={field.id}
-                control={control}
-                rules={getFieldValidation(field)}
-                render={({ field: controllerField }) => (
-                  <InputOTP
-                    maxLength={field.length || 6}
-                    containerClassName="gap-2"
-                    value={controllerField.value || ""}
-                    onChange={controllerField.onChange}
-                    className="border border-gray-300"
+          {/* Radio Group */}
+          {field.type === "radio" &&
+            field.options &&
+            field.options.length > 0 && (
+              <>
+                {preview && control ? (
+                  <Controller
+                    name={field.id}
+                    control={control}
+                    rules={getFieldValidation(field)}
+                    render={({ field: controllerField }) => (
+                      <RadioGroup
+                        value={controllerField.value}
+                        onValueChange={controllerField.onChange}
+                        className="flex flex-col flex-1 gap-1"
+                        aria-label={field.label}
+                      >
+                        {field.options?.map((opt, idx) => (
+                          <label
+                            key={idx}
+                            htmlFor={`${field.id}-${opt.value}`}
+                            className={cn(
+                              "inline-flex items-center mb-1 gap-2",
+                              isDark ? "text-gray-200" : "text-gray-700"
+                            )}
+                          >
+                            <RadioGroupItem
+                              value={opt.value}
+                              id={`${field.id}-${opt.value}`}
+                              className={cn(
+                                "mb-1 border",
+                                isDark ? "border-neutral-700" : "border-gray-300"
+                              )}
+                            />
+                            {opt.label}
+                          </label>
+                        ))}
+                      </RadioGroup>
+                    )}
+                  />
+                ) : (
+                  <RadioGroup
+                    name={field.id}
+                    className="flex flex-col flex-1 gap-1"
+                    aria-label={field.label}
                   >
-                    <InputOTPGroup>
-                      {Array.from({ length: field.length || 6 }).map((_, idx) => (
-                        <InputOTPSlot key={idx} index={idx} className="border border-gray-300" />
-                      ))}
-                    </InputOTPGroup>
-                  </InputOTP>
+                    {field.options.map((opt, idx) => (
+                      <label
+                        key={idx}
+                        htmlFor={`${field.id}-${opt.value}`}
+                        className={cn(
+                          "inline-flex items-center mb-1 gap-2",
+                          isDark ? "text-gray-200" : "text-gray-700"
+                        )}
+                      >
+                        <RadioGroupItem
+                          value={opt.value}
+                          id={`${field.id}-${opt.value}`}
+                          className={cn(
+                            "mb-1 border",
+                            isDark ? "border-neutral-700" : "border-gray-300"
+                          )}
+                        />
+                        {opt.label}
+                      </label>
+                    ))}
+                  </RadioGroup>
                 )}
+                {preview && errors?.[field.id] && (
+                  <span className="text-xs text-red-500">
+                    {errors[field.id]?.message}
+                  </span>
+                )}
+              </>
+            )}
+          {/* Number Input */}
+          {field.type === "number" && (
+            <>
+              <Input
+                id={`field-${field.id}`}
+                type="number"
+                placeholder={field.placeholder || ""}
+                aria-label={field.label}
+                className={cn(
+                  "border rounded-lg px-4 py-2 focus:ring-2 focus:ring-red-400 focus:border-red-400 transition",
+                  isDark
+                    ? "border-neutral-700 bg-neutral-900 text-white"
+                    : "border-gray-300 bg-gray-50 text-gray-900",
+                  errors?.[field.id] ? "border-red-500" : ""
+                )}
+                disabled={!preview ? false : undefined}
+                {...(preview
+                  ? register?.(field.id, getFieldValidation(field))
+                  : {})}
               />
-            ) : (
-              <InputOTP
-                maxLength={field.length || 6}
-                containerClassName="gap-2"
-                value={field.value || ""}
-                className="border border-gray-300"
-              >
-                <InputOTPGroup>
-                  {Array.from({ length: field.length || 6 }).map((_, idx) => (
-                    <InputOTPSlot key={idx} index={idx} className="border border-gray-300" />
-                  ))}
-                </InputOTPGroup>
-              </InputOTP>
+              {preview && errors?.[field.id] && (
+                <span className="text-xs text-red-500">
+                  {errors[field.id]?.message}
+                </span>
+              )}
+            </>
+          )}
+          {/* Email Input */}
+          {field.type === "email" && (
+            <>
+              <Input
+                id={`field-${field.id}`}
+                type="email"
+                placeholder={field.placeholder || ""}
+                aria-label={field.label}
+                className={cn(
+                  "border rounded-lg px-4 py-2 focus:ring-2 focus:ring-red-400 focus:border-red-400 transition",
+                  isDark
+                    ? "border-neutral-700 bg-neutral-900 text-white"
+                    : "border-gray-300 bg-gray-50 text-gray-900",
+                  errors?.[field.id] ? "border-red-500" : ""
+                )}
+                disabled={!preview ? false : undefined}
+                {...(preview
+                  ? register?.(field.id, getFieldValidation(field))
+                  : {})}
+              />
+              {preview && errors?.[field.id] && (
+                <span className="text-xs text-red-500">
+                  {errors[field.id]?.message}
+                </span>
+              )}
+            </>
+          )}
+          {/* OTP */}
+          {field.type === "OTP" && (
+            <div className="flex flex-col flex-1 gap-1">
+              {preview && control ? (
+                <Controller
+                  name={field.id}
+                  control={control}
+                  rules={getFieldValidation(field)}
+                  render={({ field: controllerField }) => (
+                    <InputOTP
+                      maxLength={field.length || 6}
+                      containerClassName="gap-2"
+                      value={controllerField.value || ""}
+                      onChange={controllerField.onChange}
+                      className={cn(
+                        "border",
+                        isDark ? "border-neutral-700" : "border-gray-300"
+                      )}
+                    >
+                      <InputOTPGroup>
+                        {Array.from({ length: field.length || 6 }).map((_, idx) => (
+                          <InputOTPSlot
+                            key={idx}
+                            index={idx}
+                            className={cn(
+                              "border",
+                              isDark ? "border-neutral-700" : "border-gray-300"
+                            )}
+                          />
+                        ))}
+                      </InputOTPGroup>
+                    </InputOTP>
+                  )}
+                />
+              ) : (
+                <InputOTP
+                  maxLength={field.length || 6}
+                  containerClassName="gap-2"
+                  value={field.value || ""}
+                  className={cn(
+                    "border",
+                    isDark ? "border-neutral-700" : "border-gray-300"
+                  )}
+                >
+                  <InputOTPGroup>
+                    {Array.from({ length: field.length || 6 }).map((_, idx) => (
+                      <InputOTPSlot
+                        key={idx}
+                        index={idx}
+                        className={cn(
+                          "border",
+                          isDark ? "border-neutral-700" : "border-gray-300"
+                        )}
+                      />
+                    ))}
+                  </InputOTPGroup>
+                </InputOTP>
+              )}
+              {preview && errors?.[field.id] && (
+                <span className="text-xs text-red-500">
+                  {errors[field.id]?.message}
+                </span>
+              )}
+            </div>
+          )}
+          {/* Button */}
+          {field.type === "button" && preview && (
+            <Button
+              type="submit"
+              className="bg-blue-500 text-white rounded px-4 py-2 w-full font-semibold shadow hover:bg-blue-600 transition"
+            >
+              {field.label || "Button"}
+            </Button>
+          )}
+        </div>
+        {/* Delete button only on hover of component */}
+        {!preview && field.type !== "button" && (
+          <>
+            <motion.button
+              whileHover={{
+                scale: 1.08,
+                backgroundColor: "#ef4444",
+                color: "#fff",
+              }}
+              whileTap={{ scale: 0.95, backgroundColor: "#b91c1c" }}
+              className="absolute top-2 right-2 px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600 transition z-10 opacity-0 group-hover:opacity-100"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowDeleteConfirm(true);
+              }}
+              aria-label={`Delete ${field.label}`}
+              type="button"
+            >
+              Delete
+            </motion.button>
+            {showDeleteConfirm && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+                <div className="bg-white dark:bg-neutral-800 rounded-lg shadow-lg p-6 min-w-[280px] max-w-xs flex flex-col items-center">
+                  <div className="text-base font-semibold mb-4 text-center text-gray-900 dark:text-white">
+                    Are you sure you want to delete this component?
+                  </div>
+                  <div className="flex gap-3 mt-2">
+                    <button
+                      className="px-4 py-1 rounded bg-red-500 text-white font-semibold hover:bg-red-600 transition"
+                      onClick={() => {
+                        setShowDeleteConfirm(false);
+                        removeField(field.id);
+                      }}
+                    >
+                      Delete
+                    </button>
+                    <button
+                      className="px-4 py-1 rounded bg-gray-200 dark:bg-neutral-700 text-gray-800 dark:text-white font-semibold hover:bg-gray-300 dark:hover:bg-neutral-600 transition"
+                      onClick={() => setShowDeleteConfirm(false)}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </div>
             )}
-            {preview && errors?.[field.id] && (
-              <span className="text-xs text-red-500">
-                {errors[field.id]?.message}
-              </span>
-            )}
-          </div>
+          </>
         )}
-        {/* Button */}
-        {field.type === "button" && preview && (
-          <Button
-            type="submit"
-            className="bg-blue-500 text-white rounded px-4 py-2 w-full font-semibold shadow hover:bg-blue-600 transition"
-          >
-            {field.label || "Button"}
-          </Button>
-        )}
-      </div>
-      {/* Delete button (top right, only in builder mode, only on hover) */}
-      {!preview && field.type !== "button" && (
-        <motion.button
-          whileHover={{
-            scale: 1.08,
-            backgroundColor: "#ef4444",
-            color: "#fff",
-          }}
-          whileTap={{ scale: 0.95, backgroundColor: "#b91c1c" }}
-          className="absolute top-2 right-2 px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600 transition z-10 opacity-0 group-hover:opacity-100"
-          onClick={(e) => {
-            e.stopPropagation();
-            removeField(field.id);
-          }}
-          aria-label={`Delete ${field.label}`}
-          type="button"
-        >
-          Delete
-        </motion.button>
-      )}
-    </motion.div>
+      </motion.div>
+    </AnimatePresence>
   );
 }
 
@@ -553,6 +670,7 @@ const FormBuilderCanvas = ({
   const selectField = useFormStore((s) => s.selectField);
   const removeField = useFormStore((s) => s.removeField);
   const reorderFields = useFormStore((s) => s.reorderFields);
+  const addField = useFormStore((s) => s.addField);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -567,7 +685,17 @@ const FormBuilderCanvas = ({
     }
   };
 
-  console.log("fields", fields);
+  // Add keyboard support for sidebar drag: listen for custom event and add field
+  useEffect(() => {
+    const handleSidebarDragStart = (e: Event) => {
+      const customEvent = e as CustomEvent<{ type: string }>;
+      if (customEvent.detail?.type) {
+        addField(customEvent.detail.type);
+      }
+    };
+    window.addEventListener("sidebar-drag-start", handleSidebarDragStart);
+    return () => window.removeEventListener("sidebar-drag-start", handleSidebarDragStart);
+  }, [addField]);
 
   // Add react-hook-form for validation
   const {
@@ -603,6 +731,8 @@ const FormBuilderCanvas = ({
     return () => observer.disconnect();
   }, []);
 
+  console.log('fields', fields)
+
   return (
     <DndContext
       sensors={sensors}
@@ -635,14 +765,18 @@ const FormBuilderCanvas = ({
       >
         <div
           ref={setNodeRef}
-          className={`flex-1 m-2 max-w-xl mx-auto transition-colors ${
-            isDark ? "bg-neutral-900 text-white" : "bg-white text-black"
-          }`}
+          className={cn(
+            // Reduced padding: padding: "16px 0" (was "32px 0")
+            "flex-1 m-2 max-w-xl mx-auto transition-colors",
+            isDark
+              ? "bg-neutral-900 text-white"
+              : "bg-white text-black"
+          )}
           style={{
             minHeight: 400,
             background: isDark ? "#18181b" : "#fafbfc",
-            borderRadius: 14,
-            padding: "20px 0",
+            borderRadius: 18,
+            padding: "16px 0",
             transition: "background 0.2s, color 0.2s",
           }}
           role="list"
@@ -652,16 +786,23 @@ const FormBuilderCanvas = ({
           <div className="mb-8 px-2">
             <input
               type="text"
-              className="text-3xl font-extrabold mb-1 text-gray-900 w-full bg-transparent outline-none tracking-tight"
+              className={cn(
+                "text-3xl font-extrabold mb-1 w-full bg-transparent outline-none tracking-tight",
+                isDark ? "text-white" : "text-gray-900"
+              )}
               value={formTitle}
               readOnly={preview}
               onChange={(e) => setFormTitle(e.target.value)}
               aria-label="Form Title"
               style={{ letterSpacing: "-0.01em" }}
+              placeholder="Untitled Form"
             />
             <input
               type="text"
-              className="text-base text-gray-400 mb-4 w-full bg-transparent outline-none"
+              className={cn(
+                "text-base mb-4 w-full bg-transparent outline-none",
+                isDark ? "text-gray-400" : "text-gray-400"
+              )}
               placeholder="Description (optional)"
               aria-label="Form Description"
               value={formDescription}
@@ -670,7 +811,7 @@ const FormBuilderCanvas = ({
             />
             {/* ...existing restriction bar... */}
           </div>
-          {fields.length === 0 && (
+          {fields.length === 0 && !preview && (
             <div
               className="text-gray-400 text-center py-8 text-lg"
               role="status"

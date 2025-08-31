@@ -31,11 +31,11 @@ export default function BuilderPage() {
 
   const [previewMode, setPreviewMode] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
-  const [history, setHistory] = useState<any[]>([]);
-  const [future, setFuture] = useState<any[]>([]);
+  const [history, setHistory] = useState<typeof fields[]>([]);
+  const [future, setFuture] = useState<typeof fields[]>([]);
 
   // Add state for form title and description
-  const [formTitle, setFormTitle] = useState("Form Title Here");
+  const [formTitle, setFormTitle] = useState("");
   const [formDescription, setFormDescription] = useState("");
 
   const sensors = useSensors(
@@ -305,9 +305,9 @@ export default function BuilderPage() {
           {!previewMode && (
             <div
               style={{
-                width: "20%",
+                width: "30%",
                 minWidth: 100,
-                maxWidth: 140,
+                maxWidth: 165,
                 background: darkMode ? "#18181b" : "#fff",
                 height: "100%",
                 overflowY: "auto",
@@ -316,6 +316,14 @@ export default function BuilderPage() {
             >
               <Sidebar />
             </div>
+          )}
+          {/* Divider between Sidebar and Canvas */}
+          {!previewMode && (
+            <div
+              className="h-full w-px bg-gray-200 dark:bg-neutral-700 mx-0"
+              aria-hidden="true"
+              style={{ minWidth: 1, maxWidth: 1 }}
+            />
           )}
           <div
             style={{
@@ -337,6 +345,14 @@ export default function BuilderPage() {
               setFormDescription={setFormDescription}
             />
           </div>
+          {/* Divider between Canvas and Config Panel */}
+          {!previewMode && (
+            <div
+              className="h-full w-px bg-gray-200 dark:bg-neutral-700 mx-0"
+              aria-hidden="true"
+              style={{ minWidth: 1, maxWidth: 1 }}
+            />
+          )}
           {!previewMode && (
             <div
               style={{
@@ -346,7 +362,6 @@ export default function BuilderPage() {
                 overflowY: "auto",
                 overflowX: "hidden",
               }}
-              className="border-l"
             >
               <FieldConfigPanel />
             </div>

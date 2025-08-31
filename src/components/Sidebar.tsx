@@ -33,6 +33,17 @@ function SidebarDraggableItem({
 		data: { type },
 	});
 
+	// Keyboard support: on Space/Enter, dispatch a custom event for the canvas to handle
+	const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+		if (e.key === " " || e.key === "Enter") {
+			e.preventDefault();
+			const dragStartEvent = new CustomEvent("sidebar-drag-start", {
+				detail: { type },
+			});
+			window.dispatchEvent(dragStartEvent);
+		}
+	};
+
 	return (
 		<motion.div
 			ref={setNodeRef}
@@ -41,8 +52,8 @@ function SidebarDraggableItem({
 			whileHover={{
 				scale: 1.04,
 				boxShadow: "0 4px 16px 0 rgba(59,130,246,0.10)",
-				backgroundColor: "#e0e7ff", // light blue-100
-				borderColor: "#2563eb", // blue-600
+				backgroundColor: "#e0e7ff",
+				borderColor: "#2563eb",
 			}}
 			transition={{ type: "spring", stiffness: 300, damping: 20 }}
 			className={`rounded-lg border-2 border-gray-300 bg-gray-50 flex flex-col items-center justify-center cursor-grab p-2 m-1 min-w-[80px] min-h-[70px] transition-colors duration-200 ${
@@ -51,6 +62,7 @@ function SidebarDraggableItem({
 			tabIndex={0}
 			aria-label={`Drag ${label}`}
 			style={{ userSelect: "none" }}
+			onKeyDown={handleKeyDown}
 		>
 			<span className="text-xs text-gray-800 font-medium text-center">{label}</span>
 		</motion.div>

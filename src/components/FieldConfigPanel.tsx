@@ -9,13 +9,11 @@ export default function FieldConfigPanel() {
 
   const field = fields.find((f) => f.id === selectedFieldId);
 
-  // Define a type for field options
   type FieldOption = {
     label: string;
     value: string;
   };
 
-  // Define a type for the local field state to avoid type conflicts
   type LocalField = {
     id: string;
     type: string;
@@ -26,9 +24,8 @@ export default function FieldConfigPanel() {
     [key: string]: unknown;
   };
 
-  // Use a local state for editing, initialized from the selected field
   const [localField, setLocalField] = useState<LocalField>(
-    (field as LocalField) || {
+    (field as unknown as LocalField) || {
       id: "",
       type: "",
       label: "",
@@ -38,10 +35,9 @@ export default function FieldConfigPanel() {
     }
   );
 
-  // Sync localField when the selected field changes
   useEffect(() => {
     if (field) {
-      setLocalField(field as LocalField);
+      setLocalField(field as unknown as LocalField);
     } else {
       setLocalField({
         id: "",
@@ -99,9 +95,7 @@ export default function FieldConfigPanel() {
     }));
   };
 
-  // FIX: Always include the latest options in the update, and do not delete options for select/radio/checkbox
   const handleUpdate = () => {
-    // Always include options for select/radio/checkbox fields, even if empty
     const updatedField = { ...localField, type: field.type };
     if (
       field.type === "select" ||
@@ -115,13 +109,14 @@ export default function FieldConfigPanel() {
       delete updatedField.options;
     }
     updateField(field.id, updatedField);
-    selectField(""); // Close the FieldConfigPanel
+    selectField(""); // Closing the FieldConfigPanel
   };
 
   console.log("localField.options", localField.options);
 
   return (
     <div className="p-4">
+      <h2 className="text-lg font-semibold mb-4">Field Configuration</h2>
       <div className="mb-3">
         <label className="block text-xs font-semibold mb-1">Label</label>
         <input
@@ -131,6 +126,7 @@ export default function FieldConfigPanel() {
           placeholder="Field label"
         />
       </div>
+      {/* Show placeholder for text fields */}
       {(field.type !== "radio" &&
         field.type !== "select" &&
         field.type !== "checkbox" &&
@@ -145,6 +141,7 @@ export default function FieldConfigPanel() {
           />
         </div>
       )}
+      {/* Show required field option */}
       <div className="mb-3 flex items-center gap-2">
         <input
           type="checkbox"
@@ -171,7 +168,7 @@ export default function FieldConfigPanel() {
         </div>
       )}
 
-      {/* Checkbox: Show label/placeholder and also allow editing options */}
+      {/* Checkbox */}
       {field.type === "checkbox" && (
         <>
           <div className="font-semibold mb-2">Checkbox Options</div>
@@ -266,7 +263,6 @@ export default function FieldConfigPanel() {
           </button>
         </>
       )}
-      {/* ...existing update button... */}
       <button
         className="mt-4 px-4 py-2 bg-green-600 text-white rounded w-full"
         type="button"
