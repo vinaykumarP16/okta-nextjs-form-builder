@@ -11,7 +11,7 @@ import {
 } from "@dnd-kit/core";
 import { useFormStore } from "@/lib/store";
 import FieldConfigPanel from "@/components/FieldConfigPanel";
-import { FormBuilderCanvas } from "@/components/Canvas";
+import { FormBuilderCanvas } from "@/components/FormBuilderCanvas";
 import {
   Download,
   Eye,
@@ -24,6 +24,8 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 
+
+// builder buttons 
 function BuilderHeader({
   previewMode,
   setPreviewMode,
@@ -35,6 +37,7 @@ function BuilderHeader({
   handleImport,
   history,
   future,
+  fields,
 }: {
   previewMode: boolean;
   setPreviewMode: (v: boolean) => void;
@@ -46,7 +49,9 @@ function BuilderHeader({
   handleImport: (e: React.ChangeEvent<HTMLInputElement>) => void;
   history: Array<unknown>;
   future: Array<unknown>;
+  fields: Array<unknown>;
 }) {
+
   return (
     <div className="flex items-center justify-between px-4 py-2 border-b bg-opacity-80 backdrop-blur sticky top-0 z-10">
       <div className="flex gap-2">
@@ -133,11 +138,16 @@ function BuilderHeader({
             color: "#fff",
           }}
           whileTap={{ scale: 0.96, backgroundColor: "#059669" }}
-          className="flex items-center gap-1 px-3 py-1 rounded bg-gray-200 transition-colors duration-150"
+          className={`flex items-center gap-1 px-3 py-1 rounded transition-colors duration-150 ${
+            fields.length === 0
+              ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+              : "bg-gray-200"
+          }`}
           onClick={handleExport}
           title="Export as JSON"
           type="button"
           aria-label="Export"
+          disabled={fields.length === 0}
         >
           <Download size={18} />
           Export
@@ -167,12 +177,11 @@ function BuilderHeader({
           />
         </motion.label>
       </div>
-      {/* Placeholder for future theme/animation controls */}
     </div>
   );
 }
 
-// --- Reusable: BuilderSeparator ---
+//  BuilderSeparator
 function BuilderSeparator() {
   return (
     <div
@@ -183,7 +192,6 @@ function BuilderSeparator() {
   );
 }
 
-// --- Main Page ---
 export default function BuilderPage() {
   const addField = useFormStore((state) => state.addField);
   const fields = useFormStore((state) => state.fields);
@@ -351,6 +359,7 @@ export default function BuilderPage() {
         handleImport={handleImport}
         history={history}
         future={future}
+        fields={fields}
       />
       <DndContext
         sensors={sensors}
