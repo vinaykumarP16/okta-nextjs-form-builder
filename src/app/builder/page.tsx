@@ -24,6 +24,166 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 
+function BuilderHeader({
+  previewMode,
+  setPreviewMode,
+  darkMode,
+  setDarkMode,
+  handleUndo,
+  handleRedo,
+  handleExport,
+  handleImport,
+  history,
+  future,
+}: {
+  previewMode: boolean;
+  setPreviewMode: (v: boolean) => void;
+  darkMode: boolean;
+  setDarkMode: (v: boolean) => void;
+  handleUndo: () => void;
+  handleRedo: () => void;
+  handleExport: () => void;
+  handleImport: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  history: Array<unknown>;
+  future: Array<unknown>;
+}) {
+  return (
+    <div className="flex items-center justify-between px-4 py-2 border-b bg-opacity-80 backdrop-blur sticky top-0 z-10">
+      <div className="flex gap-2">
+        <motion.button
+          whileHover={{
+            scale: 1.05,
+            backgroundColor: "#2563eb",
+            color: "#fff",
+          }}
+          whileTap={{ scale: 0.96, backgroundColor: "#1d4ed8" }}
+          className={`flex items-center gap-1 px-3 py-1 rounded transition-colors duration-150 ${
+            previewMode ? "bg-blue-600 text-white" : "bg-gray-200"
+          }`}
+          onClick={() => setPreviewMode(!previewMode)}
+          type="button"
+          aria-label="Toggle Preview Mode"
+        >
+          {previewMode ? <EyeOff size={18} /> : <Eye size={18} />}
+          {previewMode ? "Back to Builder" : "Preview Mode"}
+        </motion.button>
+        <motion.button
+          whileHover={{
+            scale: 1.05,
+            backgroundColor: "#fde047",
+            color: "#000",
+          }}
+          whileTap={{ scale: 0.96, backgroundColor: "#facc15" }}
+          className={`flex items-center gap-1 px-3 py-1 rounded transition-colors duration-150 ${
+            darkMode ? "bg-yellow-400 text-black" : "bg-gray-200"
+          }`}
+          onClick={() => setDarkMode(!darkMode)}
+          type="button"
+          aria-label="Toggle Dark Mode"
+        >
+          {darkMode ? <Sun size={18} /> : <Moon size={18} />}
+          {darkMode ? "Light Mode" : "Dark Mode"}
+        </motion.button>
+        <motion.button
+          whileHover={{
+            scale: 1.05,
+            backgroundColor: "#f87171",
+            color: "#fff",
+          }}
+          whileTap={{ scale: 0.96, backgroundColor: "#ef4444" }}
+          className={`flex items-center gap-1 px-3 py-1 rounded transition-colors duration-150 ${
+            history.length <= 1
+              ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+              : "bg-gray-200"
+          }`}
+          onClick={handleUndo}
+          title="Undo (Ctrl+Z)"
+          type="button"
+          aria-label="Undo"
+          disabled={history.length <= 1}
+        >
+          <Undo2 size={18} />
+          Undo
+        </motion.button>
+        <motion.button
+          whileHover={{
+            scale: 1.05,
+            backgroundColor: "#60a5fa",
+            color: "#fff",
+          }}
+          whileTap={{ scale: 0.96, backgroundColor: "#2563eb" }}
+          className={`flex items-center gap-1 px-3 py-1 rounded transition-colors duration-150 ${
+            future.length === 0
+              ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+              : "bg-gray-200"
+          }`}
+          onClick={handleRedo}
+          title="Redo (Ctrl+Y)"
+          type="button"
+          aria-label="Redo"
+          disabled={future.length === 0}
+        >
+          <Redo2 size={18} />
+          Redo
+        </motion.button>
+        <motion.button
+          whileHover={{
+            scale: 1.05,
+            backgroundColor: "#34d399",
+            color: "#fff",
+          }}
+          whileTap={{ scale: 0.96, backgroundColor: "#059669" }}
+          className="flex items-center gap-1 px-3 py-1 rounded bg-gray-200 transition-colors duration-150"
+          onClick={handleExport}
+          title="Export as JSON"
+          type="button"
+          aria-label="Export"
+        >
+          <Download size={18} />
+          Export
+        </motion.button>
+        <motion.label
+          whileHover={{
+            scale: 1.05,
+            backgroundColor: "#fbbf24",
+            color: "#fff",
+          }}
+          whileTap={{ scale: 0.96, backgroundColor: "#d97706" }}
+          className="flex items-center gap-1 px-3 py-1 rounded bg-gray-200 cursor-pointer transition-colors duration-150"
+          title="Import from JSON"
+          aria-label="Import"
+          htmlFor="import-json"
+          style={{ userSelect: "none" }}
+        >
+          <Upload size={18} />
+          Import
+          <input
+            id="import-json"
+            type="file"
+            accept="application/json"
+            className="hidden"
+            onChange={handleImport}
+            tabIndex={-1}
+          />
+        </motion.label>
+      </div>
+      {/* Placeholder for future theme/animation controls */}
+    </div>
+  );
+}
+
+// --- Reusable: BuilderSeparator ---
+function BuilderSeparator() {
+  return (
+    <div
+      className="h-full w-px bg-gray-200 dark:bg-neutral-700 mx-0"
+      aria-hidden="true"
+      style={{ minWidth: 1, maxWidth: 1 }}
+    />
+  );
+}
+
+// --- Main Page ---
 export default function BuilderPage() {
   const addField = useFormStore((state) => state.addField);
   const fields = useFormStore((state) => state.fields);
@@ -51,12 +211,10 @@ export default function BuilderPage() {
       }
       return prev;
     });
-    // eslint-disable-next-line
   }, [fields]);
 
   // Undo
   const handleUndo = useCallback(() => {
-    // Don't update state during render, use a functional update and schedule setState after
     setHistory((prev) => {
       if (prev.length <= 1) return prev;
       const newFuture = [prev[prev.length - 1], ...future];
@@ -182,117 +340,18 @@ export default function BuilderPage() {
       }
       style={{ minHeight: "100vh", overflow: "hidden" }}
     >
-      <div className="flex items-center justify-between px-4 py-2 border-b bg-opacity-80 backdrop-blur sticky top-0 z-10">
-        <div className="flex gap-2">
-          <motion.button
-            whileHover={{
-              scale: 1.05,
-              backgroundColor: "#2563eb",
-              color: "#fff",
-            }}
-            whileTap={{ scale: 0.96, backgroundColor: "#1d4ed8" }}
-            className={`flex items-center gap-1 px-3 py-1 rounded transition-colors duration-150 ${
-              previewMode ? "bg-blue-600 text-white" : "bg-gray-200"
-            }`}
-            onClick={() => setPreviewMode((v) => !v)}
-            type="button"
-            aria-label="Toggle Preview Mode"
-          >
-            {previewMode ? <EyeOff size={18} /> : <Eye size={18} />}
-            {previewMode ? "Back to Builder" : "Preview Mode"}
-          </motion.button>
-          <motion.button
-            whileHover={{
-              scale: 1.05,
-              backgroundColor: "#fde047",
-              color: "#000",
-            }}
-            whileTap={{ scale: 0.96, backgroundColor: "#facc15" }}
-            className={`flex items-center gap-1 px-3 py-1 rounded transition-colors duration-150 ${
-              darkMode ? "bg-yellow-400 text-black" : "bg-gray-200"
-            }`}
-            onClick={() => setDarkMode((v) => !v)}
-            type="button"
-            aria-label="Toggle Dark Mode"
-          >
-            {darkMode ? <Sun size={18} /> : <Moon size={18} />}
-            {darkMode ? "Light Mode" : "Dark Mode"}
-          </motion.button>
-          <motion.button
-            whileHover={{
-              scale: 1.05,
-              backgroundColor: "#f87171",
-              color: "#fff",
-            }}
-            whileTap={{ scale: 0.96, backgroundColor: "#ef4444" }}
-            className="flex items-center gap-1 px-3 py-1 rounded bg-gray-200 transition-colors duration-150"
-            onClick={handleUndo}
-            title="Undo (Ctrl+Z)"
-            type="button"
-            aria-label="Undo"
-          >
-            <Undo2 size={18} />
-            Undo
-          </motion.button>
-          <motion.button
-            whileHover={{
-              scale: 1.05,
-              backgroundColor: "#60a5fa",
-              color: "#fff",
-            }}
-            whileTap={{ scale: 0.96, backgroundColor: "#2563eb" }}
-            className="flex items-center gap-1 px-3 py-1 rounded bg-gray-200 transition-colors duration-150"
-            onClick={handleRedo}
-            title="Redo (Ctrl+Y)"
-            type="button"
-            aria-label="Redo"
-          >
-            <Redo2 size={18} />
-            Redo
-          </motion.button>
-          <motion.button
-            whileHover={{
-              scale: 1.05,
-              backgroundColor: "#34d399",
-              color: "#fff",
-            }}
-            whileTap={{ scale: 0.96, backgroundColor: "#059669" }}
-            className="flex items-center gap-1 px-3 py-1 rounded bg-gray-200 transition-colors duration-150"
-            onClick={handleExport}
-            title="Export as JSON"
-            type="button"
-            aria-label="Export"
-          >
-            <Download size={18} />
-            Export
-          </motion.button>
-          <motion.label
-            whileHover={{
-              scale: 1.05,
-              backgroundColor: "#fbbf24",
-              color: "#fff",
-            }}
-            whileTap={{ scale: 0.96, backgroundColor: "#d97706" }}
-            className="flex items-center gap-1 px-3 py-1 rounded bg-gray-200 cursor-pointer transition-colors duration-150"
-            title="Import from JSON"
-            aria-label="Import"
-            htmlFor="import-json"
-            style={{ userSelect: "none" }}
-          >
-            <Upload size={18} />
-            Import
-            <input
-              id="import-json"
-              type="file"
-              accept="application/json"
-              className="hidden"
-              onChange={handleImport}
-              tabIndex={-1}
-            />
-          </motion.label>
-        </div>
-        {/* Placeholder for future theme/animation controls */}
-      </div>
+      <BuilderHeader
+        previewMode={previewMode}
+        setPreviewMode={setPreviewMode}
+        darkMode={darkMode}
+        setDarkMode={setDarkMode}
+        handleUndo={handleUndo}
+        handleRedo={handleRedo}
+        handleExport={handleExport}
+        handleImport={handleImport}
+        history={history}
+        future={future}
+      />
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
@@ -318,13 +377,7 @@ export default function BuilderPage() {
             </div>
           )}
           {/* Divider between Sidebar and Canvas */}
-          {!previewMode && (
-            <div
-              className="h-full w-px bg-gray-200 dark:bg-neutral-700 mx-0"
-              aria-hidden="true"
-              style={{ minWidth: 1, maxWidth: 1 }}
-            />
-          )}
+          {!previewMode && <BuilderSeparator />}
           <div
             style={{
               width: previewMode ? "60%" : "55%",
@@ -336,7 +389,6 @@ export default function BuilderPage() {
             }}
             className="flex flex-col transition-all duration-300"
           >
-            {/* Pass formTitle and formDescription to FormBuilderCanvas */}
             <FormBuilderCanvas
               preview={previewMode}
               formTitle={formTitle}
@@ -346,13 +398,7 @@ export default function BuilderPage() {
             />
           </div>
           {/* Divider between Canvas and Config Panel */}
-          {!previewMode && (
-            <div
-              className="h-full w-px bg-gray-200 dark:bg-neutral-700 mx-0"
-              aria-hidden="true"
-              style={{ minWidth: 1, maxWidth: 1 }}
-            />
-          )}
+          {!previewMode && <BuilderSeparator />}
           {!previewMode && (
             <div
               style={{
